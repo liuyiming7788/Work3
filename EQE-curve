@@ -110,6 +110,7 @@ plt.rcParams['font.family']="Arial"
 plt.tight_layout()
 # plt.savefig('pic//rmse//xgb0.png', dpi = 1200)
 plt.show()
+
 # plt.close()
 from scipy import stats
 print ('r:', stats.pearsonr(y_test, y_test_hat))
