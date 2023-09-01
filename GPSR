@@ -27,7 +27,7 @@ def pareto(formula,count,fit,start,end):
 
 
 ##Part1###
-f = pd.read_csv("826.csv")
+f = pd.read_csv("newdata.csv")
 print(f)
 
 
