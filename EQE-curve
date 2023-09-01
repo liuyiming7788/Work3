@@ -7,13 +7,12 @@ import xgboost as xgb
 from sklearn.model_selection import train_test_split
 from joblib import dump,load
 import matplotlib.pyplot as plt
-import shap
+
 root='D://pythonProject liu//work3//finally2//curve//'
 f=pd.read_csv('newcurve_new.csv')
 d=f.loc[:,'HTLn':'ETLn'] 
 d['architecture']=f['architecture'] 
 print(d)
-
 
 encoder = preprocessing.OneHotEncoder()
 encoder.fit(d)
@@ -45,8 +44,7 @@ xnames=X.columns
 Y=dfnew['IPCE(%)'];YO=Y.copy()
 print(X.shape);print(Y.shape)
 
-
-X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=1)#不同特征不同波长的样本划分到一起
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=1)
 
 
 
@@ -59,7 +57,6 @@ X_test_stand = scaler.transform(X_test)
 
 
 
-
 xgbmodel = xgb.sklearn.XGBRegressor(learning_rate=0.17,
                                     n_estimators=820,
                                     max_depth=9,
@@ -69,10 +66,6 @@ xgbmodel = xgb.sklearn.XGBRegressor(learning_rate=0.17,
                                     gamma=0.4,
                                     reg_alpha=0.8,
                                     reg_lambda=13.6,random_state=10)#13.6#finall
-
-
-
-
 
 
 
