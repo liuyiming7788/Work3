@@ -29,69 +29,12 @@ def pareto(formula,count,fit,start,end):
 ##Part1###
 f = pd.read_csv("newdata.csv")
 print(f)
-
-
-##None 赋值
-f['H1']=[float(1.0) if x=='none' else float(x) for x in f['H1']]
-f['H2']=[float(1.0) if x=='none' else float(x) for x in f['H2']]
-f['L1']=[float(1.0) if x=='none' else float(x) for x in f['L1']]
-f['L2']=[float(1.0) if x=='none' else float(x) for x in f['L2']]
-
-f['hole1']=[float(0) if x=='none' else float(x) for x in f['hole1']]
-f['hole2']=[float(0) if x=='none' else float(x) for x in f['hole2']]
-f['electron1']=[float(0) if x=='none' else float(x) for x in f['electron1']]
-f['electron2']=[float(0) if x=='none' else float(x) for x in f['electron2']]
-print(f)
-fo=f.copy() #备份原数据
-
-'''
-###one-hot编码###这个删掉
-d=f.loc[:,'HTLn':'ETLn'] #待编码列
-d['architecture']=f['architecture'] #待编码列
-print(d)
-
-
-encoder = preprocessing.OneHotEncoder()
-encoder.fit(d)
-encoded=encoder.transform(d).toarray()
-print(encoded[0])
-###HTLn=0 -> 1,0,0  HTLn=1 ->0,1,0  HTLn=2 ->0,0,1    decode0,1,2
-###ETLn=0 -> 1,0,0  ETLn=1 ->0,1,0  ETLn=2 ->0,0,1    decode3,4,5
-###architecture=nip -> 1,0   architecture=pin -> 0,1   decode6,7
-###编码后的数据###20个特征-3+8=25个特征
 del f['HTLn']
 del f['ETLn']
 del f['architecture']
-for i in range(encoded.shape[1]):
-    f.insert(9+i,'decode'+str(i),encoded[:,i])
-print(f)
-'''
-
-del f['HTLn']
-del f['ETLn']
-del f['architecture']
-###编码后的数据###20个特征-3=17个特征
-
-#############################分隔符#######################
 ##Part2###
-
 f.dropna(inplace=True) 
 
-'''
-population_size=5000
-p_crossover=0.5-0.9(0.1)=pc
-p_subtree_mutation=(1-pc)/3-(0.92-pc)/3 (0.01)=ps
-p_hoist_mutation=ps=ph
-p_point_mutation=1-ps-ph-pc==pp
-parsimony_coefficient=0.0005-0.0015(step=0.0005)=pct
-tournament size=20
-metric=MAE
-function set = 'add', 'sub', 'mul', 'div','sqrt'
-Generations = 20
-constant range(-1.1)
-'''
-
-###建模学习###
 def est_gp_func(pc,ps,ph,pp,pct,gen):
     est_gp = SymbolicRegressor(population_size=5000,metric='rmse',#rmse;5000
                            function_set=('add', 'sub', 'mul', 'div','sqrt'),
@@ -114,7 +57,7 @@ Y=f['PCE(%)'];YO=Y.copy()
 print(X.shape);print(Y.shape)
 
 
-X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=10)#不同特征不同波长的样本划分到一起
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=10)
 
 
 
