@@ -1,1 +1,65 @@
+import shap
+import plotshap
 
+##shap#####
+explainer = shap.TreeExplainer(xgb_regressor) 
+shap_values = explainer.shap_values(X_train_stand)
+shap_explainer = explainer(X_train_stand)
+print(shap_values)
+print(X_train)   
+print(X_train_stand)
+print(shap_explainer)
+shap.initjs()
+shap.dependence_plot('FA', shap_values, X_train, interaction_index='I',show = False)
+shap.summary_plot(shap_values,X_train, plot_type="bar",show = False,max_display=8)
+shap.summary_plot(shap_values,X_train,plot_type = "dot",show = False,max_display=8)
+plt.rcParams['font.sans-serif'] = "Times New Roman"
+plt.rcParams.update({'font.size': 80})
+plt.tight_layout()
+plt.show()
+
+##EQE curve of shap#####
+wavelength=[400,425,450,475,500]
+rowflag=[]
+# print(X_train)
+for irow,ww in enumerate(X_train['Wavelength'].values):
+    if ww in wavelength:
+        rowflag.append(irow)
+rowflag=np.array(rowflag)  
+X_train_stand=X_train_stand[rowflag,:]
+X_train=X_train.iloc[rowflag,:]
+print(X_train_stand.shape)
+
+explainer = shap.Explainer(xgbmodel)
+shap_values = explainer(X_train_stand)
+option='summary'
+xnames=['HTLn=0' if x == 'decode0' else x for x in xnames]
+xnames=['HTLn=1' if x == 'decode1' else x for x in xnames]
+xnames=['HTLn=2' if x == 'decode2' else x for x in xnames]
+xnames=['ETLn=0' if x == 'decode3' else x for x in xnames]
+xnames=['ETLn=1' if x == 'decode4' else x for x in xnames]
+xnames=['ETLn=2' if x == 'decode5' else x for x in xnames]
+xnames=['architecture=nip' if x == 'decode6' else x for x in xnames]
+xnames=['architecture=pin' if x == 'decode7' else x for x in xnames]
+
+shap_values=shap_values[:,:-1]
+del X_train['Wavelength']
+X_train_stand=X_train_stand[:,:-1]
+xnames.remove('Wavelength')
+
+if option=='summary':
+    p=plotshap.plot(explainer,shap_values,X_train,X_train_stand,xnames)
+    p.summary_plot()
+    plt.rcParams['font.sans-serif'] = "Times New Roman"
+    plt.rcParams.update({'font.size': 80})
+    plt.tight_layout()
+    # plt.savefig(root+'shapvalues//summaryplotbar_rf.jpg')
+    plt.show()
+if option=='summary_bar':
+    p=plotshap.plot(explainer,shap_values,X_train,X_train_stand,xnames)
+    p.summary_plot_bar()
+    plt.rcParams['font.sans-serif'] = "Times New Roman"
+    plt.rcParams.update({'font.size': 80})
+    plt.tight_layout()
+    # plt.savefig(root+'shapvalues//summaryplotbar_rf.jpg')
+    plt.show()
