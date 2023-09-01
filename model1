@@ -1,0 +1,30 @@
+from sklearn import preprocessing
+from sklearn.preprocessing import StandardScaler
+from sklearn import metrics
+import pandas as pd
+import numpy as np
+import xgboost as xgb
+from sklearn.model_selection import train_test_split
+from joblib import dump,load
+import matplotlib.pyplot as plt
+import shap
+root='D://pythonProject liu//work3//finally2//curve//'
+f=pd.read_csv('newcurve_new.csv')
+d=f.loc[:,'HTLn':'ETLn'] 
+d['architecture']=f['architecture'] 
+print(d)
+
+
+encoder = preprocessing.OneHotEncoder()
+encoder.fit(d)
+encoded=encoder.transform(d).toarray()
+print(encoded[0])
+###HTLn=0 -> 1,0,0  HTLn=1 ->0,1,0  HTLn=2 ->0,0,1    decode0,1,2
+###ETLn=0 -> 1,0,0  ETLn=1 ->0,1,0  ETLn=2 ->0,0,1    decode3,4,5
+###architecture=nip -> 1,0   architecture=pin -> 0,1   decode6,7
+del f['HTLn']
+del f['ETLn']
+del f['architecture']
+for i in range(encoded.shape[1]):
+    f.insert(9+i,'decode'+str(i),encoded[:,i])
+print(f)
