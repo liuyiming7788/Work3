@@ -1,0 +1,116 @@
+import xgboost as xgb
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+from joblib import dump,load
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn import preprocessing
+    ###one-hot###
+    d = f.loc[:, 'HTLn':'ETLn']  
+    d['architecture'] = f['architecture'] 
+
+    encoder = preprocessing.OneHotEncoder()
+    encoder.fit(d)
+    encoded = encoder.transform(d).toarray()
+    print(encoded[0])
+    ###HTLn=0 -> 1,0,0  HTLn=1 ->0,1,0  HTLn=2 ->0,0,1    decode0,1,2
+    ###ETLn=0 -> 1,0,0  ETLn=1 ->0,1,0  ETLn=2 ->0,0,1    decode3,4,5
+    ###architecture=nip -> 1,0   architecture=pin -> 0,1   decode6,7
+  
+    del f['HTLn']
+    del f['ETLn']
+    del f['architecture']
+    for i in range(encoded.shape[1]):
+        f.insert(9 + i, 'decode' + str(i), encoded[:, i])
+    print(f)
+    f.dropna(inplace=True)
+
+    X = f.loc[:, 'MA':'electron2']
+    xnames = X.columns
+    Y = f['Voc(V)']
+    print(X.shape);
+    print(Y.shape)
+    return X, Y, xnames
+
+
+
+root = 'D://pythonProject//work3//finally2//pce//'
+X, Y, xnames = read_data('newdata.csv')
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=10)  
+print("X_train's shape is", X_train.shape, "; y_train's shape is", y_train.shape)
+print("X_test's shape is", X_test.shape, "; y_test's shape is", y_test.shape)
+scaler = StandardScaler()
+scaler.fit(X_train)
+X_train_stand = scaler.transform(X_train)  
+X_test_stand = scaler.transform(X_test)  
+# X_stand = scaler.transform(X)
+
+
+
+##best select model##
+
+
+xgb_regressor = xgb.sklearn.XGBRegressor(learning_rate=0.15,
+                                    n_estimators=50,
+                                    max_depth=5,
+                                    min_child_weight=4,
+                                    subsample=0.9,
+                                    colsample_bytree=0.9,
+                                    gamma=0,
+                                    reg_alpha=0,
+                                    reg_lambda=3)
+
+model = xgb_regressor
+
+
+####fit and predict###
+xgb_regressor.fit(X_train_stand, y_train)
+y_train_hat = xgb_regressor.predict(X_train_stand)
+y_test_hat = xgb_regressor.predict(X_test_stand)
+# print(y_test_hat)
+# dump(xgb_regressor,'model//xgbmode.joblib')
+# model=load('Voc.joblib')
+###plot#####
+fontsize = 12
+plt.figure(figsize=(3.5,3))
+plt.style.use('default')
+plt.rc('xtick', labelsize=fontsize)
+plt.rc('ytick', labelsize=fontsize)
+plt.rcParams['font.family']="Times New Roman"
+a = plt.scatter(y_train, y_train_hat, s=25,c='#056eee')
+plt.plot([y_train.min(), y_train.max()], [y_train.min(), y_train.max()], 'k:', lw=1.5)
+plt.xlabel('', fontsize=fontsize)
+plt.ylabel('', fontsize=fontsize)
+#plt.xticks([0, 0.6, 1.2, 1.8])
+# plt.yticks([0, 0.6, 1.2, 1.8])
+plt.tick_params(direction='in')
+#plt.text(450,80,'Scaled',family="Arial",fontsize=fontsize)
+#plt.xlim([0,2])
+#plt.ylim([0,2])
+plt.title(('Train RMSE: {:.2e}'.format(np.sqrt(metrics.mean_squared_error(y_train, y_train_hat))),\
+               'Test RMSE: {:.2e}'.format(np.sqrt(metrics.mean_squared_error(y_test, y_test_hat)))), fontsize=fontsize)
+b = plt.scatter(y_test, y_test_hat, s=25,c='#e50000')
+plt.legend((a,b),('Train','Test'),fontsize=fontsize,handletextpad=0.1,borderpad=0.1)
+plt.rcParams['font.family']="Times New Roman"
+plt.tight_layout()
+plt.show()
+
+from scipy import stats
+print ('r:', stats.pearsonr(y_test, y_test_hat))
+##shap#####
+explainer = shap.TreeExplainer(xgb_regressor) 
+shap_values = explainer.shap_values(X_train_stand)
+shap_explainer = explainer(X_train_stand)
+print(shap_values)
+print(X_train)   
+print(X_train_stand)
+print(shap_explainer)
+shap.initjs()
+shap.dependence_plot('FA', shap_values, X_train, interaction_index='I',show = False)
+shap.summary_plot(shap_values,X_train, plot_type="bar",show = False,max_display=8)
+shap.summary_plot(shap_values,X_train,plot_type = "dot",show = False,max_display=8)
+plt.rcParams['font.sans-serif'] = "Times New Roman"
+plt.rcParams.update({'font.size': 80})
+plt.tight_layout()
+plt.show()
