@@ -1,0 +1,188 @@
+from gplearn.genetic import SymbolicRegressor
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn import metrics
+from joblib import dump,load
+import re
+import seaborn as sns
+
+
+def feature_complexity(formula,count):
+    for i,form in enumerate(formula):
+        count[i] -= 2*len(re.findall(r"\d+\.?\d+",formula[i]))
+    return count
+
+def pareto(formula,count,fit,start,end):
+    for j in range(end-start+1):    
+        a = 1;b = 'r'
+        for i in range(len(count)):
+            if count[i] == j+start:
+                if fit[i]<a:
+                    a=fit[i]
+                    b=formula[i]
+        print("Fitness: {} ------  Complexity: {}".format(a,j+start))
+        print("Formula: {}\n".format(b))
+
+
+##Part1###
+f = pd.read_csv("826.csv")
+print(f)
+
+
+##None 赋值
+f['H1']=[float(1.0) if x=='none' else float(x) for x in f['H1']]
+f['H2']=[float(1.0) if x=='none' else float(x) for x in f['H2']]
+f['L1']=[float(1.0) if x=='none' else float(x) for x in f['L1']]
+f['L2']=[float(1.0) if x=='none' else float(x) for x in f['L2']]
+
+f['hole1']=[float(0) if x=='none' else float(x) for x in f['hole1']]
+f['hole2']=[float(0) if x=='none' else float(x) for x in f['hole2']]
+f['electron1']=[float(0) if x=='none' else float(x) for x in f['electron1']]
+f['electron2']=[float(0) if x=='none' else float(x) for x in f['electron2']]
+print(f)
+fo=f.copy() #备份原数据
+
+'''
+###one-hot编码###这个删掉
+d=f.loc[:,'HTLn':'ETLn'] #待编码列
+d['architecture']=f['architecture'] #待编码列
+print(d)
+
+
+encoder = preprocessing.OneHotEncoder()
+encoder.fit(d)
+encoded=encoder.transform(d).toarray()
+print(encoded[0])
+###HTLn=0 -> 1,0,0  HTLn=1 ->0,1,0  HTLn=2 ->0,0,1    decode0,1,2
+###ETLn=0 -> 1,0,0  ETLn=1 ->0,1,0  ETLn=2 ->0,0,1    decode3,4,5
+###architecture=nip -> 1,0   architecture=pin -> 0,1   decode6,7
+###编码后的数据###20个特征-3+8=25个特征
+del f['HTLn']
+del f['ETLn']
+del f['architecture']
+for i in range(encoded.shape[1]):
+    f.insert(9+i,'decode'+str(i),encoded[:,i])
+print(f)
+'''
+
+del f['HTLn']
+del f['ETLn']
+del f['architecture']
+###编码后的数据###20个特征-3=17个特征
+
+#############################分隔符#######################
+##Part2###
+
+f.dropna(inplace=True) 
+
+'''
+population_size=5000
+p_crossover=0.5-0.9(0.1)=pc
+p_subtree_mutation=(1-pc)/3-(0.92-pc)/3 (0.01)=ps
+p_hoist_mutation=ps=ph
+p_point_mutation=1-ps-ph-pc==pp
+parsimony_coefficient=0.0005-0.0015(step=0.0005)=pct
+tournament size=20
+metric=MAE
+function set = 'add', 'sub', 'mul', 'div','sqrt'
+Generations = 20
+constant range(-1.1)
+'''
+
+###建模学习###
+def est_gp_func(pc,ps,ph,pp,pct,gen):
+    est_gp = SymbolicRegressor(population_size=5000,metric='rmse',#rmse;5000
+                           function_set=('add', 'sub', 'mul', 'div','sqrt'),
+                            generations=gen, stopping_criteria=0.01,
+                            p_crossover=pc, p_subtree_mutation=ps,
+                            p_hoist_mutation=ph, p_point_mutation=pp,
+                            max_samples=0.9, verbose=1,const_range=(-1.0, 1.0),
+                            parsimony_coefficient=pct, random_state=0)
+    
+    return est_gp
+
+
+
+
+
+
+X=f.loc[:,'MA':'electron2'];XO=X.copy()
+xnames=X.columns
+Y=f['PCE(%)'];YO=Y.copy()
+print(X.shape);print(Y.shape)
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=10)#不同特征不同波长的样本划分到一起
+
+
+
+
+print("X_train's shape is", X_train.shape,"; y_train's shape is", y_train.shape)
+print("X_test's shape is", X_test.shape,"; y_test's shape is",y_test.shape)
+scaler = StandardScaler()
+scaler.fit(X_train)
+X_train_stand = scaler.transform(X_train)
+X_test_stand = scaler.transform(X_test)
+
+lss1 = [];fit1 = [];lss2 = [];fit2 = [];count1 = [];count2 = [];params=[]
+for pcpc in range(20,38):
+    pc = pcpc/40.   #pc 0.5,0.95(step=0.025)
+    for j in range(9):
+        ph = ps = (1-0.01*j-pc)/3 #ps\ph (1-pc)/3,(0.92-pc)/3 (step=0.01)
+        pp = 1 - ph - ps - pc
+        print("pc = {},ps = {},pp = {},ph = {}".format(pc,ps,pp,ph))
+        if pp + ps + pc + ph >= 1 or ph <=0:
+            continue
+        else:
+            for pctpct in range(3): ##parsimony coefficient=0.0005,0.0015(step=0.0005)
+                pct=0.0005+pctpct*0.0005
+                for gen in range(2,21): ##generations=[2,20]
+                    est_gp = est_gp_func(pc, ps, ph, pp, pct, gen)
+                    est_gp.fit(X_train_stand, y_train)
+                    # print(est_gp._program)
+                    for a in range(5000):
+                        lss1.append(str(est_gp._programs[-1][a]))
+                        fit1.append(est_gp._programs[-1][a].raw_fitness_)
+                        count1.append(est_gp._programs[-1][a].length_)
+                        lss2.append(str(est_gp._programs[-2][a]))
+                        params.append(str([pc, ps, ph, pp, pct, gen]))
+                        if str(est_gp._programs[-2][a]) == 'None':
+                            fit2.append(0)
+                            count2.append(0)
+                        else:
+                            fit2.append(est_gp._programs[-2][a].raw_fitness_)
+                            count2.append(est_gp._programs[-2][a].length_)
+
+
+###write all results###
+rt=pd.DataFrame()
+rt['formula']=lss1
+rt['fitness']=fit1
+rt['length']=count1
+rt['complexity']=feature_complexity(lss1, count1)
+rt['params']=params
+rt.to_csv('result_gplearn.csv')
+
+y_gp_train = est_gp.predict(X_train_stand)
+y_gp_test = est_gp.predict(X_test_stand)
+print(np.sqrt(metrics.mean_squared_error(y_train, y_gp_train)))
+print(np.sqrt(metrics.mean_squared_error(y_test, y_gp_test)))
+dump(est_gp,'D://xhj//mm//gplearn//model//'+'gpmodel3.h5')
+
+def plotdata(rt,yvalue=[x/2.0 for x in range(40,66)],xvalue=range(1,15)):
+    df=pd.DataFrame(index=yvalue,columns=xvalue)
+    for x in xvalue:
+        for y in yvalue:
+            df0=rt[rt['complexity']==x]
+            df0=df0[df0['fitness']<=y+0.5]
+            df0=df0[df0['fitness']>=y]
+            nn=df0.shape[0]
+            df.loc[y,x]=nn
+    df.to_csv('plotdata.csv')
+    
+    sns.heatmap(df)
+    
+plotdata(rt)            
+            
