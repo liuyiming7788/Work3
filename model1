@@ -28,3 +28,95 @@ del f['architecture']
 for i in range(encoded.shape[1]):
     f.insert(9+i,'decode'+str(i),encoded[:,i])
 print(f)
+dfnew=pd.DataFrame()
+f0=f.loc[:,'MA':'electron2']
+for w in range(400,1001,25):
+    f00=f0.copy()
+    print(w)
+    f00['Wavelength']=w
+    f00['IPCE(%)']=f[str(w)]
+    dfnew=dfnew.append(f00)
+print(dfnew)
+# dfnew.to_csv('newcurve_wave2.csv')
+
+###train###
+X=dfnew.loc[:,'MA':'Wavelength'];XO=X.copy()
+xnames=X.columns
+Y=dfnew['IPCE(%)'];YO=Y.copy()
+print(X.shape);print(Y.shape)
+
+
+X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=1)#不同特征不同波长的样本划分到一起
+
+
+
+print("X_train's shape is", X_train.shape,"; y_train's shape is", y_train.shape)
+print("X_test's shape is", X_test.shape,"; y_test's shape is",y_test.shape)
+scaler = StandardScaler()
+scaler.fit(X_train)
+X_train_stand = scaler.transform(X_train)
+X_test_stand = scaler.transform(X_test)
+
+
+
+
+xgbmodel = xgb.sklearn.XGBRegressor(learning_rate=0.17,
+                                    n_estimators=820,
+                                    max_depth=9,
+                                    min_child_weight=6,
+                                    subsample=0.8,
+                                    colsample_bytree=0.7,
+                                    gamma=0.4,
+                                    reg_alpha=0.8,
+                                    reg_lambda=13.6,random_state=10)#13.6#finall
+
+
+
+
+
+
+
+####fit and predict###
+xgbmodel.fit(X_train_stand, y_train)
+
+y_train_hat = xgbmodel.predict(X_train_stand)
+y_test_hat = xgbmodel.predict(X_test_stand)
+
+#save predict samples##
+df_p=pd.DataFrame(X_test,columns=xnames)
+df_p['prediction']=y_test_hat
+df_p['observation']=y_test.values
+df_p['flag']=y_test.index
+print(df_p)
+# df_p.to_csv('vsdata5.csv')
+dump(scaler,'model//scaler_curve.joblib')
+dump(xgbmodel,'model//xgboost3.model')
+
+###plot#####
+fontsize = 12
+plt.figure(figsize=(3.5,3))
+plt.style.use('default')
+plt.rc('xtick', labelsize=fontsize)
+plt.rc('ytick', labelsize=fontsize)
+plt.rcParams['font.family']="Arial"
+a = plt.scatter(y_train, y_train_hat, s=25,c='#b2df8a')
+plt.plot([y_train.min(), y_train.max()], [y_train.min(), y_train.max()], 'k:', lw=1.5)
+plt.xlabel('Observation', fontsize=fontsize)
+plt.ylabel('Prediction', fontsize=fontsize)
+#plt.xticks([0, 0.6, 1.2, 1.8])
+# plt.yticks([0, 0.6, 1.2, 1.8])
+plt.tick_params(direction='in')
+#plt.text(450,80,'Scaled',family="Arial",fontsize=fontsize)
+#plt.xlim([0,2]) 
+#plt.ylim([0,2])
+plt.title(('Train RMSE: {:.2e}'.format(np.sqrt(metrics.mean_squared_error(y_train, y_train_hat))),\
+               'Test RMSE: {:.2e}'.format(np.sqrt(metrics.mean_squared_error(y_test, y_test_hat)))), fontsize=fontsize)
+b = plt.scatter(y_test, y_test_hat, s=25,c='#1f78b4')
+plt.legend((a,b),('Train','Test'),fontsize=fontsize,handletextpad=0.1,borderpad=0.1)
+plt.rcParams['font.family']="Arial"
+plt.tight_layout()
+# plt.savefig('pic//rmse//xgb0.png', dpi = 1200)
+plt.show()
+# plt.close()
+from scipy import stats
+print ('r:', stats.pearsonr(y_test, y_test_hat))
