@@ -98,19 +98,3 @@ plt.show()
 
 from scipy import stats
 print ('r:', stats.pearsonr(y_test, y_test_hat))
-##shap#####
-explainer = shap.TreeExplainer(xgb_regressor) 
-shap_values = explainer.shap_values(X_train_stand)
-shap_explainer = explainer(X_train_stand)
-print(shap_values)
-print(X_train)   
-print(X_train_stand)
-print(shap_explainer)
-shap.initjs()
-shap.dependence_plot('FA', shap_values, X_train, interaction_index='I',show = False)
-shap.summary_plot(shap_values,X_train, plot_type="bar",show = False,max_display=8)
-shap.summary_plot(shap_values,X_train,plot_type = "dot",show = False,max_display=8)
-plt.rcParams['font.sans-serif'] = "Times New Roman"
-plt.rcParams.update({'font.size': 80})
-plt.tight_layout()
-plt.show()
